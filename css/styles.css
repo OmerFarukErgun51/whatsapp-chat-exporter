@@ -1,0 +1,602 @@
+/* ==========================================================================
+   WhatsApp to Excel Exporter - Stylesheet
+   Design Language: Premium Dark Mode with Glassmorphism and WhatsApp Teal Glow
+   ========================================================================== */
+
+/* Theme Variables */
+:root {
+    --bg-primary: #0b141a;       /* WhatsApp dark background */
+    --bg-secondary: #111b21;     /* WhatsApp header/card dark */
+    --bg-card: rgba(22, 37, 45, 0.7); /* Frosted glass card */
+    --border-glass: rgba(255, 255, 255, 0.08);
+    --border-glow: rgba(0, 168, 132, 0.3);
+    
+    --text-primary: #e9edef;     /* Off-white */
+    --text-muted: #8696a0;       /* Secondary grey text */
+    --text-dark: #111b21;
+    
+    --color-whatsapp: #00a884;   /* Green WhatsApp theme */
+    --color-whatsapp-hover: #008f72;
+    --color-excel: #107c41;      /* Microsoft Excel green */
+    --color-excel-hover: #0b592e;
+    --color-csv: #2b7de9;        /* Blue */
+    --color-csv-hover: #1c5bb3;
+    
+    --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    
+    --shadow-glow: 0 8px 32px 0 rgba(0, 168, 132, 0.15);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reset & Base Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-primary);
+    background-image: radial-gradient(circle at 10% 20%, rgba(0, 168, 132, 0.05) 0%, transparent 60%),
+                      radial-gradient(circle at 90% 80%, rgba(43, 125, 233, 0.03) 0%, transparent 50%);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 2rem 1.5rem;
+}
+
+/* Main Container Layout */
+.app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Header Section */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.whatsapp-glow-icon {
+    background: linear-gradient(135deg, #25d366, #075e54);
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: white;
+    box-shadow: 0 0 20px rgba(37, 211, 102, 0.4);
+    animation: pulseGlow 3s infinite ease-in-out;
+}
+
+#main-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.8rem;
+    letter-spacing: -0.5px;
+    background: linear-gradient(120deg, #ffffff 30%, #a2ffeb 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.privacy-badge {
+    background: rgba(0, 168, 132, 0.1);
+    border: 1px solid rgba(0, 168, 132, 0.2);
+    border-radius: 2rem;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #a2ffeb;
+}
+
+/* App Grid Layout */
+.app-content {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+/* Responsive grid for single column when results panel is hidden */
+.app-content:has(.results-panel.hidden) {
+    grid-template-columns: 1fr;
+    max-width: 650px;
+    margin: 0 auto;
+}
+
+/* Generic Cards with Glassmorphism */
+.card {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-glass);
+    border-radius: 1.25rem;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+    transition: var(--transition-smooth);
+}
+
+.card:hover {
+    border-color: rgba(0, 168, 132, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Control Panel card specific styles */
+.card-instructions h2, .card-metrics h2 {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.50rem;
+}
+
+/* Tabs inside Instruction Card */
+.tabs {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.25rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-glass);
+}
+
+.tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-muted);
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 0.35rem;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+.tab-btn.active {
+    background: var(--bg-secondary);
+    color: var(--color-whatsapp);
+    font-weight: 600;
+}
+
+.tab-content ol {
+    padding-left: 1.25rem;
+    font-size: 0.85rem;
+    color: #c1ced6;
+}
+
+.tab-content li {
+    margin-bottom: 0.75rem;
+}
+
+.tab-content li strong {
+    color: var(--text-primary);
+}
+
+.tab-content code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    color: #ffd166;
+    font-size: 0.8rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Drag & Drop Upload Zone */
+.drop-zone {
+    border: 2px dashed rgba(0, 168, 132, 0.3);
+    border-radius: 1rem;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(0, 168, 132, 0.02);
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition-smooth);
+}
+
+.drop-zone:hover, .drop-zone.dragover {
+    background: rgba(0, 168, 132, 0.06);
+    border-color: var(--color-whatsapp);
+    box-shadow: var(--shadow-glow);
+}
+
+.file-input-hidden {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.upload-icon-wrapper {
+    width: 4rem;
+    height: 4rem;
+    background: rgba(0, 168, 132, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem;
+    color: var(--color-whatsapp);
+    font-size: 1.8rem;
+    transition: var(--transition-smooth);
+}
+
+.drop-zone:hover .upload-icon-wrapper {
+    transform: translateY(-5px);
+    background: rgba(0, 168, 132, 0.2);
+}
+
+.drop-zone h3 {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.drop-zone p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.file-limits {
+    display: inline-block;
+    font-size: 0.75rem;
+    color: #566670;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.or-separator {
+    text-align: center;
+    margin: 1rem 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+}
+
+.or-separator::before, .or-separator::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: var(--border-glass);
+}
+
+.or-separator::before { left: 0; }
+.or-separator::after { right: 0; }
+
+/* Demo Button styling */
+.btn-demo {
+    width: 100%;
+}
+
+/* Button UI Components */
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.9rem 1.5rem;
+    border-radius: 0.75rem;
+    border: none;
+    outline: none;
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    border: 1px solid var(--border-glass);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-excel {
+    background: var(--color-excel);
+    color: white;
+    box-shadow: 0 4px 15px rgba(16, 124, 65, 0.3);
+    width: 100%;
+    max-width: 450px;
+}
+
+.btn-excel:hover {
+    background: var(--color-excel-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 124, 65, 0.5);
+}
+
+.btn-csv {
+    background: rgba(43, 125, 233, 0.15);
+    border: 1px solid rgba(43, 125, 233, 0.3);
+    color: #72adff;
+}
+
+.btn-csv:hover {
+    background: var(--color-csv);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(43, 125, 233, 0.3);
+}
+
+/* Results Panel Layout */
+.results-panel {
+    animation: fadeIn 0.4s ease-out;
+}
+
+.action-bar {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+/* Metrics Section */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    margin-top: 0.5rem;
+}
+
+.metric-item {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-glass);
+    padding: 1.25rem 1rem;
+    border-radius: 0.75rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.metric-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.metric-value {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--color-whatsapp);
+}
+
+.metric-value-sub {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #e9edef;
+    word-break: break-all;
+    line-height: 1.3;
+}
+
+/* Table Preview Card and Table Styles */
+.card-table {
+    padding: 1.5rem 0 0 0; /* Remove horizontal padding so scroll flows nicely */
+    overflow: hidden;
+}
+
+.table-header {
+    padding: 0 1.75rem 1.25rem 1.75rem;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.table-header h3 {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.table-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.table-wrapper {
+    max-height: 480px;
+    overflow-y: auto;
+    width: 100%;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+th {
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--text-primary);
+    font-weight: 600;
+    padding: 0.9rem 1.25rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+td {
+    padding: 0.9rem 1.25rem;
+    border-bottom: 1px solid var(--border-glass);
+    color: #d1d7db;
+    vertical-align: top;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Colors for specific table columns */
+td:nth-child(1), td:nth-child(2) {
+    color: #8696a0; /* Date and time columns */
+    width: 110px;
+}
+
+td:nth-child(3) {
+    font-weight: 600;
+    color: #5cc29c; /* Sender Name column */
+    width: 140px;
+}
+
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--bg-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 9999;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: var(--transition-smooth);
+}
+
+.toast.toast-success {
+    border-left: 4px solid var(--color-whatsapp);
+    color: #e9edef;
+}
+
+.toast.toast-error {
+    border-left: 4px solid #ef476f;
+    color: #e9edef;
+}
+
+.toast-icon {
+    font-size: 1.1rem;
+}
+
+.toast-icon.fa-check-circle {
+    color: var(--color-whatsapp);
+}
+
+.toast-icon.fa-triangle-exclamation {
+    color: #ef476f;
+}
+
+/* Text Accent Utilities */
+.text-primary { color: var(--color-whatsapp); }
+.text-success { color: var(--color-whatsapp); }
+
+/* Keyframe Animations */
+@keyframes pulseGlow {
+    0% {
+        box-shadow: 0 0 15px rgba(37, 211, 102, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(37, 211, 102, 0.6);
+    }
+    100% {
+        box-shadow: 0 0 15px rgba(37, 211, 102, 0.3);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Media Queries */
+@media (max-width: 900px) {
+    body {
+        padding: 1.5rem 1rem;
+    }
+    
+    .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .privacy-badge {
+        align-self: flex-start;
+    }
+
+    .app-content, .app-content:has(.results-panel.hidden) {
+        grid-template-columns: 1fr;
+        max-width: 100%;
+    }
+}

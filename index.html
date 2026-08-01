@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Sohbet Geçmişini Excel'e Aktar</title>
+    <meta name="description" content="WhatsApp'tan dışa aktardığınız sohbet geçmişlerini (.txt dosyalarını) kolayca Excel (.xlsx) veya CSV tablolarına dönüştürün. Tamamen güvenli ve yerel işlem.">
+    
+    <!-- Google Fonts - Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- JSZip for ZIP Extraction (Local for USB/Offline support) -->
+    <script src="js/jszip.min.js"></script>
+    <!-- SheetJS (XLSX) for Excel Generation (Local for USB/Offline support) -->
+    <script src="js/xlsx.full.min.js"></script>
+    
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header Section -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="whatsapp-glow-icon">
+                    <i class="fab fa-whatsapp"></i>
+                </div>
+                <div>
+                    <h1 id="main-title">WhatsApp Excel Exporter</h1>
+                    <p class="subtitle">Sohbetlerinizi düzenli Excel tablolarına dönüştürün</p>
+                </div>
+            </div>
+            <div class="privacy-badge">
+                <i class="fas fa-shield-halved"></i>
+                <span>%100 Güvenli & Yerel İşlem</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="app-content">
+            <!-- Left Panel: Upload and Instructions -->
+            <section class="control-panel">
+                <!-- Instruction Card -->
+                <div class="card card-instructions" id="instructions-card">
+                    <h2><i class="fas fa-info-circle text-primary"></i> Sohbeti Nasıl Dışa Aktarırım?</h2>
+                    <div class="tabs">
+                        <button class="tab-btn active" id="btn-tab-ios" onclick="switchTab('ios')"><i class="fab fa-apple"></i> iOS (iPhone)</button>
+                        <button class="tab-btn" id="btn-tab-android" onclick="switchTab('android')"><i class="fab fa-android"></i> Android</button>
+                    </div>
+                    <div class="tab-content" id="tab-content-ios">
+                        <ol>
+                            <li>WhatsApp sohbetini açın ve en üstteki kişi/grup adına dokunun.</li>
+                            <li>Aşağı kaydırıp <strong>Sohbeti Dışa Aktar</strong> seçeneğine tıklayın.</li>
+                            <li><strong>Medya Ekle</strong> (Resimler için) ya da <strong>Medyasız</strong> seçin.</li>
+                            <li>Oluşan <code>.zip</code> dosyasını bilgisayarınıza kaydedin.</li>
+                        </ol>
+                    </div>
+                    <div class="tab-content hidden" id="tab-content-android">
+                        <ol>
+                            <li>WhatsApp sohbetini açın ve sağ üstteki <strong>üç noktaya (...)</strong> dokunun.</li>
+                            <li><strong>Diğer > Sohbeti dışa aktar</strong> yolunu izleyin.</li>
+                            <li><strong>Medyayı ekle</strong> (Resimler için) ya da <strong>Medya olmadan</strong> seçin.</li>
+                            <li>Oluşan <code>.zip</code> veya <code>.txt</code> dosyasını bilgisayarınıza aktarın.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Dropzone Area -->
+                <div class="card card-upload">
+                    <div class="drop-zone" id="drop-zone-container">
+                        <input type="file" id="file-input" accept=".txt,.zip" class="file-input-hidden">
+                        <div class="drop-zone-content">
+                            <div class="upload-icon-wrapper">
+                                <i class="fas fa-file-zipper"></i>
+                            </div>
+                            <h3>Sohbet Dosyasını Yükleyin</h3>
+                            <p>WhatsApp'tan aldığınız <code>.zip</code> veya <code>.txt</code> dosyasını sürükleyin veya tıklayıp seçin.</p>
+                            <span class="file-limits">.zip ve .txt dosyaları desteklenir</span>
+                        </div>
+                    </div>
+                    
+                    <div class="or-separator">veya</div>
+                    
+                    <!-- Quick Demo Button -->
+                    <button class="btn btn-secondary btn-demo" id="btn-load-demo" onclick="loadDemoData()">
+                        <i class="fas fa-wand-magic-sparkles"></i> Örnek Sohbet Yükle & Test Et
+                    </button>
+                </div>
+            </section>
+
+            <!-- Right Panel: Data Preview & Export (Hidden by default until file is uploaded) -->
+            <section class="results-panel hidden" id="results-section">
+                <!-- Status & Metrics Card -->
+                <div class="card card-metrics">
+                    <h2><i class="fas fa-chart-simple text-success"></i> Sohbet Özeti</h2>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <span class="metric-label">Toplam Mesaj</span>
+                            <span class="metric-value" id="val-total-messages">0</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Konuşmacı Sayısı</span>
+                            <span class="metric-value" id="val-total-participants">0</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Tarih Aralığı</span>
+                            <span class="metric-value-sub" id="val-date-range">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action / Export Buttons -->
+                <div class="action-bar">
+                    <button class="btn btn-excel" id="btn-export-excel" onclick="exportZipPackage()">
+                        <i id="btn-export-icon" class="fas fa-file-excel"></i> <span id="btn-export-text">Excel (.xlsx) Olarak İndir</span>
+                    </button>
+                </div>
+
+                <!-- Table Preview Card -->
+                <div class="card card-table">
+                    <div class="table-header">
+                        <h3><i class="fas fa-list"></i> Önizleme (İlk 15 Mesaj)</h3>
+                        <span class="table-subtitle">Excel dosyanızda tüm mesajlar yer alacaktır.</span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="preview-table">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>Saat</th>
+                                    <th>Gönderici</th>
+                                    <th>Mesaj</th>
+                                    <th>Resim Kodu</th>
+                                </tr>
+                            </thead>
+                            <tbody id="preview-tbody">
+                                <!-- Table rows will be inserted here dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Error/Success Notification Toast -->
+    <div id="toast-notification" class="toast hidden">
+        <i class="toast-icon fas fa-info-circle"></i>
+        <span id="toast-message">Bildirim mesajı</span>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
