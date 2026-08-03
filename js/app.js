@@ -181,17 +181,22 @@ const ChatParser = {
                 msg.imageCode = AppState.renamedImagesMap[filename].newName;
                 msg.message = "[Resim Gönderildi]";
             } else if (zipPath || !AppState.isZipMode) {
-                AppState.imageCounter++;
-                const ext = filename.split('.').pop().toLowerCase();
-                const dateStr = this.cleanDate(msg.date);
-                const newName = `Resim_${dateStr}_${AppState.imageCounter}.${ext}`;
-                
-                AppState.renamedImagesMap[filename] = {
-                    zipPath: zipPath,
-                    newName: newName
-                };
-                
-                msg.imageCode = newName;
+                if (AppState.isZipMode) {
+                    // Zip Mode: Rename images since we will bundle them in the output zip
+                    AppState.imageCounter++;
+                    const ext = filename.split('.').pop().toLowerCase();
+                    const dateStr = this.cleanDate(msg.date);
+                    const newName = `Resim_${dateStr}_${AppState.imageCounter}.${ext}`;
+                    
+                    AppState.renamedImagesMap[filename] = {
+                        zipPath: zipPath,
+                        newName: newName
+                    };
+                    msg.imageCode = newName;
+                } else {
+                    // Text Mode: Keep original filename so the user can easily search it in their local folder!
+                    msg.imageCode = filename;
+                }
                 msg.message = "[Resim Gönderildi]";
             }
         }
