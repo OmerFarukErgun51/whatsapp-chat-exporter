@@ -112,7 +112,12 @@ const ChatParser = {
                 
                 // Clean the sender name and message of document/user icons
                 const cleanedSender = this.stripIcons(match[3]);
-                const cleanedMessage = this.stripIcons(match[4]);
+                let cleanedMessage = this.stripIcons(match[4]);
+                
+                // FALLBACK: If the message is completely empty (e.g. stripped emoji or empty media), make it a descriptive label!
+                if (cleanedMessage === "" && cleanedSender !== "Sistem") {
+                    cleanedMessage = "📄 [Dosya/Belge]";
+                }
                 
                 currentMsg = {
                     date: match[1],
@@ -140,7 +145,10 @@ const ChatParser = {
                     };
                 } else {
                     if (currentMsg) {
-                        currentMsg.message += "\n" + this.stripIcons(chunk);
+                        const cleanedChunk = this.stripIcons(chunk);
+                        if (cleanedChunk) {
+                            currentMsg.message += "\n" + cleanedChunk;
+                        }
                     }
                 }
             }
@@ -333,19 +341,76 @@ const FileExporter = {
     },
 
     /**
-     * Builds SheetJS workbook structure and formats column widths
+     * Builds SheetJS workbook structure and formats column widths.
+     * Splits long messages into multiple Excel rows, replicating date, time and sender,
+     * ensuring no text cuts off on default grid views.
      */
     buildExcelBuffer() {
-        const wsData = AppState.parsedData.map(item => ({
-            "Tarih": item.date,
-            "Saat": item.time,
-            "Gönderici": item.sender,
-            "Mesaj": item.message,
-            "Görsel Kodu": item.imageCode || ""
-        }));
+        const expandedRows = [];
+        
+        AppState.parsedData.forEach(item => {
+            const message = item.message || "";
+            // Split by existing newlines first
+            const paragraphs = message.split(/\r?\n/);
+            
+            let isFirstRowForMsg = true;
+            paragraphs.forEach(para => {
+                const paraText = para.trim();
+                if (!paraText && paragraphs.length > 1) {
+                    // Empty newline in multi-line message
+                    expandedRows.push({
+                        "Tarih": item.date,
+                        "Saat": item.time,
+                        "Gönderici": item.sender,
+                        "Mesaj": "",
+                        "Görsel Kodu": ""
+                    });
+                    isFirstRowForMsg = false;
+                    return;
+                }
+                
+                // If paragraph fits in 60 characters, push as single row
+                if (para.length <= 60) {
+                    expandedRows.push({
+                        "Tarih": item.date,
+                        "Saat": item.time,
+                        "Gönderici": item.sender,
+                        "Mesaj": para,
+                        "Görsel Kodu": isFirstRowForMsg ? (item.imageCode || "") : ""
+                    });
+                    isFirstRowForMsg = false;
+                } else {
+                    // Split the paragraph into chunks of max 60 characters
+                    const words = para.split(/\s+/);
+                    let chunks = [];
+                    let currentChunk = "";
+                    
+                    words.forEach(word => {
+                        if ((currentChunk + " " + word).trim().length <= 60) {
+                            currentChunk = (currentChunk + " " + word).trim();
+                        } else {
+                            if (currentChunk) chunks.push(currentChunk);
+                            currentChunk = word;
+                        }
+                    });
+                    if (currentChunk) chunks.push(currentChunk);
+                    
+                    chunks.forEach(chunk => {
+                        expandedRows.push({
+                            "Tarih": item.date,
+                            "Saat": item.time,
+                            "Gönderici": item.sender,
+                            "Mesaj": chunk,
+                            "Görsel Kodu": isFirstRowForMsg ? (item.imageCode || "") : ""
+                        });
+                        isFirstRowForMsg = false;
+                    });
+                }
+            });
+        });
         
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(wsData);
+        const ws = XLSX.utils.json_to_sheet(expandedRows);
         
         // Calculate dynamic column widths based on maximum content length
         let maxDate = 10;
@@ -354,19 +419,19 @@ const FileExporter = {
         let maxMsg = 20;
         let maxImg = 12;
 
-        AppState.parsedData.forEach(item => {
-            if (item.date && item.date.length > maxDate) maxDate = item.date.length;
-            if (item.time && item.time.length > maxTime) maxTime = item.time.length;
-            if (item.sender && item.sender.length > maxSender) maxSender = item.sender.length;
-            if (item.message && item.message.length > maxMsg) maxMsg = item.message.length;
-            if (item.imageCode && item.imageCode.length > maxImg) maxImg = item.imageCode.length;
+        expandedRows.forEach(item => {
+            if (item["Tarih"] && item["Tarih"].length > maxDate) maxDate = item["Tarih"].length;
+            if (item["Saat"] && item["Saat"].length > maxTime) maxTime = item["Saat"].length;
+            if (item["Gönderici"] && item["Gönderici"].length > maxSender) maxSender = item["Gönderici"].length;
+            if (item["Mesaj"] && item["Mesaj"].length > maxMsg) maxMsg = item["Mesaj"].length;
+            if (item["Görsel Kodu"] && item["Görsel Kodu"].length > maxImg) maxImg = item["Görsel Kodu"].length;
         });
 
         ws['!cols'] = [
             { wch: Math.min(25, maxDate + 2) },
             { wch: Math.min(20, maxTime + 2) },
             { wch: Math.min(40, maxSender + 2) },
-            { wch: Math.min(100, maxMsg + 2) }, // Max 100 characters width for messages
+            { wch: Math.min(70, maxMsg + 2) }, // Max 70 characters width
             { wch: Math.min(45, maxImg + 2) }
         ];
         
