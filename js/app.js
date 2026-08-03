@@ -574,6 +574,8 @@ DOMManager.init();
 
 // Binding trigger functions for HTML onclick attributes
 function loadDemoData() {
+    AppState.reset();
+    DOMManager.updateExportButton(false);
     DOMManager.processAndDisplay(DEMO_CHAT_DATA);
 }
 
