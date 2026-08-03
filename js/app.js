@@ -65,11 +65,26 @@ const ChatParser = {
     iosSysRegex: /^\[(\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}),?\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?)\]\s*([\s\S]*)$/i,
 
     /**
-     * Helper to remove common icons/emojis from parsed values (📄, 👥, 👤, 📷, 🎥, 🎵, 📎)
+     * Helper to remove common icons/emojis from parsed values (📄, 👥, 👤, 📷, 🎥, 🎵, 📎, 💼)
      */
     stripIcons(val) {
         if (!val) return "";
-        return val.replace(/[📄👥👤📷🎥🎵📎]/gu, "").trim();
+        const original = val.trim();
+        // Added 💼 (briefcase) to the list of stripped emojis
+        const cleaned = val.replace(/[📄👥👤📷🎥🎵📎💼]/gu, "").trim();
+        
+        // If the message is completely empty after cleaning but had content originally,
+        // it means it was a standalone icon representing a sent document/attachment.
+        if (cleaned === "" && original !== "") {
+            if (original.includes("📄") || original.includes("📎")) {
+                return "[Dosya/Belge]";
+            }
+            if (original.includes("📷") || original.includes("🎥")) {
+                return "[Medya/Görsel]";
+            }
+            return "[Medya]";
+        }
+        return cleaned;
     },
 
     /**
