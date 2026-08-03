@@ -586,6 +586,36 @@ td:nth-child(3) {
     }
 }
 
+/* Close Preview and Header Flex Styles */
+.card-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.btn-close-preview {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border-glass);
+    color: var(--text-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-close-preview:hover {
+    background: rgba(239, 71, 111, 0.2);
+    border-color: rgba(239, 71, 111, 0.4);
+    color: #ef476f;
+    transform: translateY(-1px);
+}
+
 /* Responsive Media Queries */
 @media (max-width: 900px) {
     body {

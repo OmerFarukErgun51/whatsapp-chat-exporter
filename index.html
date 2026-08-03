@@ -96,7 +96,12 @@
             <section class="results-panel hidden" id="results-section">
                 <!-- Status & Metrics Card -->
                 <div class="card card-metrics">
-                    <h2><i class="fas fa-chart-simple text-success"></i> Sohbet Özeti</h2>
+                    <div class="card-header-flex">
+                        <h2><i class="fas fa-chart-simple text-success"></i> Sohbet Özeti</h2>
+                        <button class="btn-close-preview" onclick="clearData()" title="Kapat ve Geri Dön">
+                            <i class="fas fa-xmark"></i> Geri Dön
+                        </button>
+                    </div>
                     <div class="metrics-grid">
                         <div class="metric-item">
                             <span class="metric-label">Toplam Mesaj</span>
