@@ -284,159 +284,148 @@ const FileExporter = {
      */
     exportZipPackage() {
         DOMManager.showToast("Zip paketi hazırlanıyor, lütfen bekleyin...", "success");
-        
-        try {
-            const excelBuffer = this.buildExcelBuffer();
-            const newZip = new JSZip();
-            
-            // Add the Excel table
-            newZip.file("sohbet_listesi.xlsx", excelBuffer);
-            
-            // Create a subfolder inside the ZIP and extract/add images to it asynchronously
-            const imgFolder = newZip.folder("resimler");
-            const copyPromises = [];
 
-            Object.keys(AppState.renamedImagesMap).forEach(key => {
-                const imgInfo = AppState.renamedImagesMap[key];
-                if (imgInfo.zipPath) {
-                    const promise = AppState.uploadedZip.file(imgInfo.zipPath).async("arraybuffer")
-                        .then((buffer) => {
-                            imgFolder.file(imgInfo.newName, buffer);
-                        });
-                    copyPromises.push(promise);
-                }
-            });
+        this.buildExcelBuffer()
+            .then((excelBuffer) => {
+                const newZip = new JSZip();
 
-            // Trigger the download once all files are successfully copied
-            Promise.all(copyPromises)
-                .then(() => newZip.generateAsync({ type: "blob" }))
-                .then((blob) => {
-                    this.triggerDownload(blob, "whatsapp_sohbet_paketi.zip");
-                    DOMManager.showToast("Sohbet paketi (.zip) başarıyla indirildi!", "success");
-                })
-                .catch((err) => {
-                    console.error(err);
-                    DOMManager.showToast("Zip paketi oluşturulurken hata meydana geldi!", "error");
+                // Add the Excel table
+                newZip.file("sohbet_listesi.xlsx", excelBuffer);
+
+                // Create a subfolder inside the ZIP and extract/add images to it asynchronously
+                const imgFolder = newZip.folder("resimler");
+                const copyPromises = [];
+
+                Object.keys(AppState.renamedImagesMap).forEach(key => {
+                    const imgInfo = AppState.renamedImagesMap[key];
+                    if (imgInfo.zipPath) {
+                        const promise = AppState.uploadedZip.file(imgInfo.zipPath).async("arraybuffer")
+                            .then((buffer) => {
+                                imgFolder.file(imgInfo.newName, buffer);
+                            });
+                        copyPromises.push(promise);
+                    }
                 });
-                
-        } catch (error) {
-            console.error(error);
-            DOMManager.showToast("Veriler derlenirken hata oluştu!", "error");
-        }
+
+                // Trigger the download once all files are successfully copied
+                return Promise.all(copyPromises)
+                    .then(() => newZip.generateAsync({ type: "blob" }));
+            })
+            .then((blob) => {
+                this.triggerDownload(blob, "whatsapp_sohbet_paketi.zip");
+                DOMManager.showToast("Sohbet paketi (.zip) başarıyla indirildi!", "success");
+            })
+            .catch((err) => {
+                console.error(err);
+                DOMManager.showToast("Zip paketi oluşturulurken hata meydana geldi!", "error");
+            });
     },
 
     /**
      * Helper to export the spreadsheet directly as an .xlsx file
      */
     exportExcelDirect() {
-        try {
-            const excelBuffer = this.buildExcelBuffer();
-            const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-            this.triggerDownload(blob, "whatsapp_sohbet_aktarim.xlsx");
-            DOMManager.showToast("Excel dosyası başarıyla indirildi!", "success");
-        } catch (error) {
-            console.error(error);
-            DOMManager.showToast("Excel dosyası oluşturulurken hata meydana geldi!", "error");
-        }
+        this.buildExcelBuffer()
+            .then((excelBuffer) => {
+                const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                this.triggerDownload(blob, "whatsapp_sohbet_aktarim.xlsx");
+                DOMManager.showToast("Excel dosyası başarıyla indirildi!", "success");
+            })
+            .catch((error) => {
+                console.error(error);
+                DOMManager.showToast("Excel dosyası oluşturulurken hata meydana geldi!", "error");
+            });
     },
 
     /**
-     * Builds SheetJS workbook structure and formats column widths.
-     * Splits long messages into multiple Excel rows, replicating date, time and sender,
-     * ensuring no text cuts off on default grid views.
+     * Wraps a single line of text onto multiple lines without exceeding the
+     * character limit, breaking on word boundaries and hard-splitting any word
+     * that is longer than the limit on its own.
+     */
+    wrapLine(text, limit) {
+        if (text.length <= limit) return [text];
+
+        const lines = [];
+        let current = "";
+
+        text.split(/\s+/).forEach(word => {
+            if (word.length > limit) {
+                // Flush whatever we have, then cut the oversized word into slices
+                if (current) { lines.push(current); current = ""; }
+                for (let i = 0; i < word.length; i += limit) {
+                    lines.push(word.slice(i, i + limit));
+                }
+                return;
+            }
+            const candidate = current ? current + " " + word : word;
+            if (candidate.length <= limit) {
+                current = candidate;
+            } else {
+                if (current) lines.push(current);
+                current = word;
+            }
+        });
+
+        if (current) lines.push(current);
+        return lines;
+    },
+
+    /**
+     * Builds the Excel workbook with ExcelJS. Every message stays on a single
+     * row: long text is wrapped into chunks that fit the column and merged back
+     * into one cell with wrap-text enabled, so the grid never breaks alignment.
      */
     buildExcelBuffer() {
-        const expandedRows = [];
-        
-        AppState.parsedData.forEach(item => {
+        const CHAR_LIMIT = 60;
+
+        const rows = AppState.parsedData.map(item => {
             const message = item.message || "";
-            // Split by existing newlines first
-            const paragraphs = message.split(/\r?\n/);
-            
-            let isFirstRowForMsg = true;
-            paragraphs.forEach(para => {
-                const paraText = para.trim();
-                if (!paraText && paragraphs.length > 1) {
-                    // Empty newline in multi-line message
-                    expandedRows.push({
-                        "Tarih": item.date,
-                        "Saat": item.time,
-                        "Gönderici": item.sender,
-                        "Mesaj": "",
-                        "Görsel Kodu": ""
-                    });
-                    isFirstRowForMsg = false;
-                    return;
-                }
-                
-                // If paragraph fits in 60 characters, push as single row
-                if (para.length <= 60) {
-                    expandedRows.push({
-                        "Tarih": item.date,
-                        "Saat": item.time,
-                        "Gönderici": item.sender,
-                        "Mesaj": para,
-                        "Görsel Kodu": isFirstRowForMsg ? (item.imageCode || "") : ""
-                    });
-                    isFirstRowForMsg = false;
-                } else {
-                    // Split the paragraph into chunks of max 60 characters
-                    const words = para.split(/\s+/);
-                    let chunks = [];
-                    let currentChunk = "";
-                    
-                    words.forEach(word => {
-                        if ((currentChunk + " " + word).trim().length <= 60) {
-                            currentChunk = (currentChunk + " " + word).trim();
-                        } else {
-                            if (currentChunk) chunks.push(currentChunk);
-                            currentChunk = word;
-                        }
-                    });
-                    if (currentChunk) chunks.push(currentChunk);
-                    
-                    chunks.forEach(chunk => {
-                        expandedRows.push({
-                            "Tarih": item.date,
-                            "Saat": item.time,
-                            "Gönderici": item.sender,
-                            "Mesaj": chunk,
-                            "Görsel Kodu": isFirstRowForMsg ? (item.imageCode || "") : ""
-                        });
-                        isFirstRowForMsg = false;
-                    });
-                }
-            });
-        });
-        
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(expandedRows);
-        
-        // Calculate dynamic column widths based on maximum content length
-        let maxDate = 10;
-        let maxTime = 8;
-        let maxSender = 12;
-        let maxMsg = 20;
-        let maxImg = 12;
+            const wrapped = message
+                .split(/\r?\n/)
+                .map(para => this.wrapLine(para.trim(), CHAR_LIMIT).join("\n"))
+                .join("\n");
 
-        expandedRows.forEach(item => {
-            if (item["Tarih"] && item["Tarih"].length > maxDate) maxDate = item["Tarih"].length;
-            if (item["Saat"] && item["Saat"].length > maxTime) maxTime = item["Saat"].length;
-            if (item["Gönderici"] && item["Gönderici"].length > maxSender) maxSender = item["Gönderici"].length;
-            if (item["Mesaj"] && item["Mesaj"].length > maxMsg) maxMsg = item["Mesaj"].length;
-            if (item["Görsel Kodu"] && item["Görsel Kodu"].length > maxImg) maxImg = item["Görsel Kodu"].length;
+            return {
+                date: item.date || "",
+                time: item.time || "",
+                sender: item.sender || "",
+                message: wrapped,
+                image: item.imageCode || ""
+            };
         });
 
-        ws['!cols'] = [
-            { wch: Math.min(25, maxDate + 2) },
-            { wch: Math.min(20, maxTime + 2) },
-            { wch: Math.min(40, maxSender + 2) },
-            { wch: Math.min(70, maxMsg + 2) }, // Max 70 characters width
-            { wch: Math.min(45, maxImg + 2) }
+        // Keep the auxiliary columns comfortable, but pin the message column so
+        // wrapping is predictable regardless of the longest message.
+        let senderWidth = 14;
+        rows.forEach(r => {
+            if (r.sender.length + 2 > senderWidth) senderWidth = r.sender.length + 2;
+        });
+        senderWidth = Math.min(40, senderWidth);
+
+        const wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet("Sohbet Mesajları");
+
+        ws.columns = [
+            { header: "Tarih", key: "date", width: 14 },
+            { header: "Saat", key: "time", width: 10 },
+            { header: "Gönderici", key: "sender", width: senderWidth },
+            { header: "Mesaj", key: "message", width: CHAR_LIMIT + 2 },
+            { header: "Görsel Kodu", key: "image", width: 16 }
         ];
-        
-        XLSX.utils.book_append_sheet(wb, ws, "Sohbet Mesajları");
-        return XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+        const headerRow = ws.getRow(1);
+        headerRow.font = { bold: true };
+        headerRow.alignment = { vertical: "middle" };
+
+        rows.forEach(r => {
+            const row = ws.addRow(r);
+            row.eachCell(cell => {
+                cell.alignment = { vertical: "top" };
+            });
+            row.getCell("message").alignment = { wrapText: true, vertical: "top" };
+        });
+
+        return wb.xlsx.writeBuffer();
     },
 
     /**
