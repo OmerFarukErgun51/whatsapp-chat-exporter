@@ -55,67 +55,82 @@ const DEMO_CHAT_DATA = `[01.08.2026, 09:15:30] Ahmet Yılmaz: Günaydın arkada�
 
 const ChatParser = {
     // Android e.g. "20.10.2024 14:32 - Ahmet: Selam" or "10/20/24, 2:32 PM - John: Hello"
-    androidRegex: /^(\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}),?\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?)\s*-\s*([^:]+):\s*(.*)$/i,
+    androidRegex: /^(\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}),?\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?)\s*-\s*([^:]+):\s*([\s\S]*)$/i,
     
     // iOS e.g. "[20.10.2024, 14:32:01] Ahmet: Selam" or "[10/20/24, 2:32:01 PM] John: Hello"
-    iosRegex: /^\[(\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}),?\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?)\]\s*([^:]+):\s*(.*)$/i,
+    iosRegex: /^\[(\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}),?\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?)\]\s*([^:]+):\s*([\s\S]*)$/i,
     
     // System message matchers (lines with timestamps but having no user-sender colon separator)
-    androidSysRegex: /^(\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}),?\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?)\s*-\s*(.*)$/i,
-    iosSysRegex: /^\[(\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}),?\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?)\]\s*(.*)$/i,
+    androidSysRegex: /^(\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}),?\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?)\s*-\s*([\s\S]*)$/i,
+    iosSysRegex: /^\[(\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}),?\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?)\]\s*([\s\S]*)$/i,
 
     /**
-     * Main parser that processes raw chat text line-by-line into message objects
+     * Helper to remove common icons/emojis from parsed values (📄, 👥, 👤, 📷, 🎥, 🎵, 📎)
+     */
+    stripIcons(val) {
+        if (!val) return "";
+        return val.replace(/[📄👥👤📷🎥🎵📎]/gu, "").trim();
+    },
+
+    /**
+     * Main parser that processes raw chat text into message objects, splitting by message stamps
      */
     parse(text) {
-        const lines = text.split(/\r?\n/);
+        // Regex to split by iOS or Android message start (using positive lookahead to keep the stamp)
+        const messageSplitRegex = /(?=\[\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?\])|(?=\b\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?\s*-\s*)/;
+        
+        const chunks = text.split(messageSplitRegex);
         const parsedMessages = [];
         let currentMsg = null;
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (!line.trim()) continue;
+        for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i].trim();
+            if (!chunk) continue;
 
-            let match = line.match(this.iosRegex) || line.match(this.androidRegex);
+            let match = chunk.match(this.iosRegex) || chunk.match(this.androidRegex);
 
             if (match) {
-                // If we hit a new message, process the previous one and push it to array
                 if (currentMsg) {
                     this.processAttachment(currentMsg);
                     parsedMessages.push(currentMsg);
                 }
+                
+                // Clean the sender name and message of document/user icons
+                const cleanedSender = this.stripIcons(match[3]);
+                const cleanedMessage = this.stripIcons(match[4]);
+                
                 currentMsg = {
                     date: match[1],
                     time: match[2],
-                    sender: match[3].trim(),
-                    message: match[4],
-                    imageCode: "" // Column field that will show the renamed code in Excel
+                    sender: cleanedSender,
+                    message: cleanedMessage,
+                    imageCode: ""
                 };
             } else {
-                // Check if it starts with date/time but has no sender (System alert)
-                let sysMatch = line.match(this.iosSysRegex) || line.match(this.androidSysRegex);
+                let sysMatch = chunk.match(this.iosSysRegex) || chunk.match(this.androidSysRegex);
                 if (sysMatch) {
                     if (currentMsg) {
                         this.processAttachment(currentMsg);
                         parsedMessages.push(currentMsg);
                     }
+                    
+                    const cleanedMessage = this.stripIcons(sysMatch[3]);
+                    
                     currentMsg = {
                         date: sysMatch[1],
                         time: sysMatch[2],
                         sender: "Sistem",
-                        message: sysMatch[3],
+                        message: cleanedMessage,
                         imageCode: ""
                     };
                 } else {
-                    // Continuation of a multi-line message (append text to previous message)
                     if (currentMsg) {
-                        currentMsg.message += "\n" + line;
+                        currentMsg.message += "\n" + this.stripIcons(chunk);
                     }
                 }
             }
         }
 
-        // Push the final message object
         if (currentMsg) {
             this.processAttachment(currentMsg);
             parsedMessages.push(currentMsg);
@@ -317,13 +332,27 @@ const FileExporter = {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(wsData);
         
-        // Define clean, readable grid widths
+        // Calculate dynamic column widths based on maximum content length
+        let maxDate = 10;
+        let maxTime = 8;
+        let maxSender = 12;
+        let maxMsg = 20;
+        let maxImg = 12;
+
+        AppState.parsedData.forEach(item => {
+            if (item.date && item.date.length > maxDate) maxDate = item.date.length;
+            if (item.time && item.time.length > maxTime) maxTime = item.time.length;
+            if (item.sender && item.sender.length > maxSender) maxSender = item.sender.length;
+            if (item.message && item.message.length > maxMsg) maxMsg = item.message.length;
+            if (item.imageCode && item.imageCode.length > maxImg) maxImg = item.imageCode.length;
+        });
+
         ws['!cols'] = [
-            { wch: 14 }, // Tarih
-            { wch: 12 }, // Saat
-            { wch: 22 }, // Gönderici
-            { wch: 50 }, // Mesaj
-            { wch: 18 }  // Görsel Kodu
+            { wch: Math.min(25, maxDate + 2) },
+            { wch: Math.min(20, maxTime + 2) },
+            { wch: Math.min(40, maxSender + 2) },
+            { wch: Math.min(100, maxMsg + 2) }, // Max 100 characters width for messages
+            { wch: Math.min(45, maxImg + 2) }
         ];
         
         XLSX.utils.book_append_sheet(wb, ws, "Sohbet Mesajları");
