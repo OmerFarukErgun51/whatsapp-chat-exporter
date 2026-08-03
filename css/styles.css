@@ -345,7 +345,12 @@ body {
     color: white;
     box-shadow: 0 4px 15px rgba(16, 124, 65, 0.3);
     width: 100%;
-    max-width: 450px;
+    max-width: 320px;
+}
+
+.btn-clear {
+    width: 100%;
+    max-width: 320px;
 }
 
 .btn-excel:hover {
@@ -375,7 +380,9 @@ body {
 .action-bar {
     display: flex;
     justify-content: center;
+    gap: 1rem;
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
 }
 
 /* Metrics Section */

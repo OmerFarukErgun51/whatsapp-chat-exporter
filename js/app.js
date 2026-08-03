@@ -354,6 +354,9 @@ const DOMManager = {
         const dropZone = document.getElementById("drop-zone-container");
         const fileInput = document.getElementById("file-input");
         
+        // Ensure browser file cache is cleared on page load
+        fileInput.value = "";
+        
         // Let drop-zone click trigger file explorer input
         dropZone.addEventListener("click", () => fileInput.click());
         
@@ -373,6 +376,45 @@ const DOMManager = {
             dropZone.classList.remove("dragover");
             if (e.dataTransfer.files.length > 0) this.handleFileSelection(e.dataTransfer.files[0]);
         });
+    },
+
+    /**
+     * Switches instruction tabs between iOS and Android
+     */
+    switchTab(platform) {
+        const iosBtn = document.getElementById("btn-tab-ios");
+        const androidBtn = document.getElementById("btn-tab-android");
+        const iosContent = document.getElementById("tab-content-ios");
+        const androidContent = document.getElementById("tab-content-android");
+        
+        if (platform === "ios") {
+            iosBtn.classList.add("active");
+            androidBtn.classList.remove("active");
+            iosContent.classList.remove("hidden");
+            androidContent.classList.add("hidden");
+        } else {
+            androidBtn.classList.add("active");
+            iosBtn.classList.remove("active");
+            androidContent.classList.remove("hidden");
+            iosContent.classList.add("hidden");
+        }
+    },
+
+    /**
+     * Resets application state and clears results view to start fresh
+     */
+    clearResults() {
+        AppState.reset();
+        document.getElementById("file-input").value = "";
+        document.getElementById("preview-tbody").innerHTML = "";
+        
+        // Hide the results panel
+        document.getElementById("results-section").classList.add("hidden");
+        this.updateExportButton(false);
+        
+        // Scroll back to the top smoothly
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        this.showToast("Uygulama sıfırlandı. Yeni bir sohbet yükleyebilirsiniz.", "success");
     },
 
     /**
@@ -530,11 +572,19 @@ const DOMManager = {
 // Bind DOM event listeners on load
 DOMManager.init();
 
-// Binding trigger function for HTML onclick attributes
+// Binding trigger functions for HTML onclick attributes
 function loadDemoData() {
     DOMManager.processAndDisplay(DEMO_CHAT_DATA);
 }
 
 function exportZipPackage() {
     FileExporter.export();
+}
+
+function switchTab(platform) {
+    DOMManager.switchTab(platform);
+}
+
+function clearData() {
+    DOMManager.clearResults();
 }
